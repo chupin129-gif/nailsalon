@@ -62,7 +62,7 @@ app.post('/api/trends', async (req, res) => {
       model,
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
+        thinkingConfig: { thinkingBudget: 0 },
       },
     });
 
@@ -283,6 +283,7 @@ app.post('/api/generate', async (req, res) => {
       model,
       contents: promptText,
       config: {
+        thinkingConfig: { thinkingBudget: 0 },
         systemInstruction,
         responseMimeType: 'application/json',
         responseSchema: schema,

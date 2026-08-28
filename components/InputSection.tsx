@@ -6,7 +6,6 @@ interface InputSectionProps {
   params: BlogPostParams;
   onChange: (field: keyof BlogPostParams, value: any) => void;
   onSubmit?: () => void;
-  onLoadSample?: () => void;
   isGenerating?: boolean;
 }
 
@@ -52,7 +51,6 @@ export const InputSection: React.FC<InputSectionProps> = ({
   params,
   onChange,
   onSubmit,
-  onLoadSample,
   isGenerating
 }) => {
   const currentAuthorType: AuthorType = params.authorType || 'owner';
@@ -61,21 +59,14 @@ export const InputSection: React.FC<InputSectionProps> = ({
   return (
     <div className="flex flex-col h-full bg-slate-950 border-r border-white/10 overflow-y-auto text-slate-300 shadow-2xl">
       <div className="p-5 space-y-4 flex-1">
-        {/* Top Header Bar with Sample Load Button */}
+        {/* Top Header Bar */}
         <div className="flex items-center justify-between pb-2 border-b border-white/5">
           <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-pink-400" /> 시술 정보 & 키워드 설정
           </span>
-          {onLoadSample && (
-            <button
-              type="button"
-              onClick={onLoadSample}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 font-semibold transition-all flex items-center gap-1 active:scale-95"
-            >
-              <Sparkles className="w-3 h-3" />
-              추천 예시 불러오기
-            </button>
-          )}
+          <span className="text-[11px] text-slate-500 font-medium">
+            * 필수 입력 항목
+          </span>
         </div>
 
         {/* Author Perspective Selection with Tone Previews */}
@@ -185,7 +176,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
           />
           {!params.mainKeyword?.trim() && (
             <p className="text-[11px] text-pink-400/90 pl-1 flex items-center gap-1">
-              <span>💡 원고 생성을 위해 노출할 대표 키워드를 적어주세요. (상단 [추천 예시 불러오기] 클릭 가능)</span>
+              <span>💡 원고 생성을 위해 상위 노출할 대표 키워드를 적어주세요.</span>
             </p>
           )}
         </div>

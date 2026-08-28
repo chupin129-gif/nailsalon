@@ -7,16 +7,16 @@ import { fetchLatestSeoTrends, generateBlogPost } from './services/geminiService
 import { Menu, X, Sparkles, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-const DEFAULT_SAMPLE_PARAMS: BlogPostParams = {
-  shopName: '네일드블랑 강남본점',
-  location: '강남역 11번 출구 도보 3분',
+const EMPTY_PARAMS: BlogPostParams = {
+  shopName: '',
+  location: '',
   category: '이달의 아트',
   authorType: 'owner',
-  mainKeyword: '강남역 네일샵',
-  subKeywords: '유지력 좋은 젤네일, 드릴케어, 자석젤',
-  priceOrOffer: '첫방문 20% 할인 + 젤제거 무료',
-  callToAction: '네이버 플레이스 예약 (프로필 링크)',
-  draft: '손톱이 얇아서 잘 부러지는 고객님 맞춤으로 오버레이 꼼꼼 보강. 이번 신상 자석젤로 은은하고 영롱한 광택 연출. 5주 유지력 보장 드릴케어 시술.',
+  mainKeyword: '',
+  subKeywords: '',
+  priceOrOffer: '',
+  callToAction: '',
+  draft: '',
 };
 
 const DEFAULT_SEO_GUIDELINES: Record<Platform, SeoTrend> = {
@@ -68,26 +68,28 @@ const App: React.FC = () => {
   // State
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isFetchingTrend, setIsFetchingTrend] = useState(false);
   const [params, setParams] = useState<BlogPostParams>(() => {
     const saved = localStorage.getItem('NAIL_BLOG_PARAMS_CACHE');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed.mainKeyword === 'string' && parsed.mainKeyword.trim()) {
+        if (parsed && parsed.shopName !== '네일드블랑 강남본점' && typeof parsed.mainKeyword === 'string' && parsed.mainKeyword.trim()) {
           return parsed;
         }
+        localStorage.removeItem('NAIL_BLOG_PARAMS_CACHE');
       } catch (e) {
         console.error('Failed to parse cached params');
       }
     }
-    return DEFAULT_SAMPLE_PARAMS;
+    return EMPTY_PARAMS;
   });
   const [generatedData, setGeneratedData] = useState<Partial<Record<Platform, GeneratedBlog>>>({});
   const [seoTrends, setSeoTrends] = useState<Partial<Record<Platform, SeoTrend>>>({});
   const [activePlatform, setActivePlatform] = useState<Platform>('naver');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const isGenerating = status === AppStatus.GENERATING_CONTENT || status === AppStatus.FETCHING_TRENDS;
+  const isGenerating = status === AppStatus.GENERATING_CONTENT;
 
   const CACHE_KEY = 'NAIL_SEO_TREND_CACHE';
   const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -106,12 +108,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLoadSample = () => {
-    setParams(DEFAULT_SAMPLE_PARAMS);
-    setStatus(AppStatus.IDLE);
-    setErrorMessage('');
-  };
-
   const getCachedTrend = (platform: Platform): SeoTrend | null => {
     const cached = localStorage.getItem(`${CACHE_KEY}_${platform}`);
     if (cached) {
@@ -128,7 +124,7 @@ const App: React.FC = () => {
   };
 
   const fetchTrends = async (platform: Platform, forceRefresh = false) => {
-    setStatus(AppStatus.FETCHING_TRENDS);
+    setIsFetchingTrend(true);
     try {
       const oldTrend = getCachedTrend(platform) || undefined;
       const trend = await fetchLatestSeoTrends(forceRefresh ? oldTrend : undefined, platform);
@@ -143,6 +139,8 @@ const App: React.FC = () => {
     } catch (error) {
       console.error(error);
       return null;
+    } finally {
+      setIsFetchingTrend(false);
     }
   };
 
@@ -159,16 +157,10 @@ const App: React.FC = () => {
       setActivePlatform(platform);
       setIsSidebarOpen(false); // Close sidebar on mobile
       
-      // Step 1: Use instant guideline so user doesn't wait 25+ seconds for search crawler
       const currentTrend = seoTrends[platform] || getCachedTrend(platform) || DEFAULT_SEO_GUIDELINES[platform];
       setSeoTrends(prev => ({ ...prev, [platform]: currentTrend }));
 
-      // Background refresh of live web trend if uncached
-      if (!seoTrends[platform] && !getCachedTrend(platform)) {
-        fetchTrends(platform).catch(console.error);
-      }
-
-      // Step 2: Generate Nail Marketing Content immediately (fast response!)
+      // Generate Nail Marketing Content
       setStatus(AppStatus.GENERATING_CONTENT);
       const result = await generateBlogPost(params, currentTrend, platform);
       setGeneratedData(prev => ({ ...prev, [platform]: result }));
@@ -244,7 +236,6 @@ const App: React.FC = () => {
               handleSubmit(activePlatform);
               setIsSidebarOpen(false);
             }}
-            onLoadSample={handleLoadSample}
             isGenerating={isGenerating}
           />
         </aside>
@@ -267,7 +258,7 @@ const App: React.FC = () => {
             <TrendWidget 
               activePlatform={activePlatform}
               trend={seoTrends[activePlatform] || null} 
-              isLoading={status === AppStatus.FETCHING_TRENDS} 
+              isLoading={isFetchingTrend} 
               onRefresh={() => fetchTrends(activePlatform, true)}
             />
 
@@ -282,20 +273,12 @@ const App: React.FC = () => {
                     </span>
                     <span className="text-[11px] text-red-300/80 mt-0.5 block">
                       {!params.mainKeyword?.trim() 
-                        ? '좌측 입력창에서 [대표 검색 키워드]를 입력하거나, 우측 [추천 예시 불러오기]를 누르시면 바로 테스트 가능합니다.' 
-                        : '키워드를 확인하신 후 [재시도]를 누르시면 바로 다시 생성됩니다.'}
+                        ? '좌측 입력창에서 [대표 검색 키워드]를 입력하신 후 원고를 생성해주세요.' 
+                        : '키워드 및 입력 정보를 확인하신 후 [재시도]를 누르시면 다시 생성됩니다.'}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {!params.mainKeyword?.trim() && (
-                    <button
-                      onClick={handleLoadSample}
-                      className="px-3 py-1.5 bg-pink-500/20 hover:bg-pink-500/30 text-pink-200 rounded-lg font-bold transition-all whitespace-nowrap"
-                    >
-                      ✨ 예시 자동 채우기
-                    </button>
-                  )}
                   <button 
                     onClick={() => {
                       if (!params.mainKeyword?.trim()) {

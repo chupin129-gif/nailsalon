@@ -115,8 +115,8 @@ app.post('/api/trends', async (req, res) => {
 app.post('/api/generate', async (req, res) => {
   try {
     const { params, seoTrend, platform = 'naver' } = req.body;
-    if (!params || !params.mainKeyword) {
-      return res.status(400).json({ error: '메인 키워드를 입력해주세요.' });
+    if (!params || !params.mainKeyword || !params.mainKeyword.trim()) {
+      return res.status(400).json({ error: '대표 검색 키워드(예: 강남역 네일샵)를 입력해주세요.' });
     }
 
     const ai = getGenAI();

@@ -29,6 +29,7 @@ interface ResultDisplayProps {
   onGeneratePlatform: (platform: Platform) => void;
   status: AppStatus;
   params: BlogPostParams;
+  onOpenSidebar?: () => void;
 }
 
 const platformConfig: Record<Platform, { label: string; icon: string; activeClass: string; badge: string; isCore?: boolean }> = {
@@ -86,7 +87,8 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
   setActivePlatform, 
   onGeneratePlatform, 
   status, 
-  params 
+  params,
+  onOpenSidebar
 }) => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -162,8 +164,11 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({
   };
 
   const handleGenerateClick = () => {
-    if (!params.mainKeyword) {
-      alert('좌측에서 대표 검색 키워드를 입력해주세요.');
+    if (!params.mainKeyword || !params.mainKeyword.trim()) {
+      triggerToast('⚠️ 좌측 입력창에서 [대표 검색 키워드]를 먼저 입력해주세요!');
+      if (onOpenSidebar) {
+        onOpenSidebar();
+      }
       return;
     }
     onGeneratePlatform(activePlatform);

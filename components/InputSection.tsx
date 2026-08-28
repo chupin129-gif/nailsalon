@@ -6,6 +6,7 @@ interface InputSectionProps {
   params: BlogPostParams;
   onChange: (field: keyof BlogPostParams, value: any) => void;
   onSubmit?: () => void;
+  onLoadSample?: () => void;
   isGenerating?: boolean;
 }
 
@@ -51,6 +52,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
   params,
   onChange,
   onSubmit,
+  onLoadSample,
   isGenerating
 }) => {
   const currentAuthorType: AuthorType = params.authorType || 'owner';
@@ -59,6 +61,23 @@ export const InputSection: React.FC<InputSectionProps> = ({
   return (
     <div className="flex flex-col h-full bg-slate-950 border-r border-white/10 overflow-y-auto text-slate-300 shadow-2xl">
       <div className="p-5 space-y-4 flex-1">
+        {/* Top Header Bar with Sample Load Button */}
+        <div className="flex items-center justify-between pb-2 border-b border-white/5">
+          <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-pink-400" /> 시술 정보 & 키워드 설정
+          </span>
+          {onLoadSample && (
+            <button
+              type="button"
+              onClick={onLoadSample}
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 font-semibold transition-all flex items-center gap-1 active:scale-95"
+            >
+              <Sparkles className="w-3 h-3" />
+              추천 예시 불러오기
+            </button>
+          )}
+        </div>
+
         {/* Author Perspective Selection with Tone Previews */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -145,20 +164,30 @@ export const InputSection: React.FC<InputSectionProps> = ({
         </div>
 
         {/* Main Keyword */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5" id="main-keyword-group">
           <label className="block text-xs font-bold text-slate-200 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
-              <Hash className="w-3.5 h-3.5 text-pink-400" /> 대표 검색 키워드 (필수)
+              <Hash className="w-3.5 h-3.5 text-pink-400" /> 대표 검색 키워드 <span className="text-pink-400 font-bold">*</span>
             </span>
-            <span className="text-[10px] text-pink-400 font-normal">검색 노출 핵심 타겟</span>
+            <span className="text-[10px] text-pink-400 font-medium">상위 노출 필수 타겟</span>
           </label>
           <input
             type="text"
+            id="main-keyword-input"
             placeholder="예: 강남역 네일샵, 봄 이달의아트, 웨딩네일"
             value={params.mainKeyword}
             onChange={(e) => onChange('mainKeyword', e.target.value)}
-            className="w-full px-3.5 py-2.5 text-sm bg-slate-900 border border-slate-700/70 rounded-xl focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 text-white outline-none transition-all placeholder:text-slate-600 shadow-inner"
+            className={`w-full px-3.5 py-2.5 text-sm bg-slate-900 border rounded-xl focus:ring-2 text-white outline-none transition-all placeholder:text-slate-600 shadow-inner ${
+              !params.mainKeyword?.trim()
+                ? 'border-pink-500/60 focus:border-pink-500 focus:ring-pink-500/30'
+                : 'border-slate-700/70 focus:border-pink-500 focus:ring-pink-500/30'
+            }`}
           />
+          {!params.mainKeyword?.trim() && (
+            <p className="text-[11px] text-pink-400/90 pl-1 flex items-center gap-1">
+              <span>💡 원고 생성을 위해 노출할 대표 키워드를 적어주세요. (상단 [추천 예시 불러오기] 클릭 가능)</span>
+            </p>
+          )}
         </div>
 
         {/* Sub Keywords */}

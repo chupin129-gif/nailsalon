@@ -2,6 +2,9 @@ import express from "express";
 import path from "path";
 import { GoogleGenAI, Schema, Type } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import { createFallbackBlogContent } from "./utils/fallbackContent.ts";
+
+const CANDIDATE_MODELS = ['gemini-2.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
 
 let aiClient: GoogleGenAI | null = null;
 function getGenAI(): GoogleGenAI {
@@ -51,7 +54,6 @@ app.post(['/api/trends', '/api/trends/'], async (req, res) => {
     }
 
     const ai = getGenAI();
-    const model = 'gemini-2.5-flash';
 
     const platformPrompts: Record<string, string> = {
       naver: '네이버 블로그 네일샵 젤네일 스마트블록 DIA+ 상위노출 알고리즘 핵심 요약',
@@ -74,15 +76,25 @@ app.post(['/api/trends', '/api/trends/'], async (req, res) => {
       - ### CHANGES: 최근 주요 변화 또는 주의점 1줄
     `;
 
-    const response = await ai.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        thinkingConfig: { thinkingBudget: 0 },
-      },
-    });
+    let response: any = null;
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        response = await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        });
+        if (response?.text) {
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`[Trends] Model ${model} failed, trying next:`, err?.message?.slice(0, 80));
+      }
+    }
 
-    const fullText = response.text || '최신 네일샵 노출 알고리즘 분석 완료';
+    const fullText = response?.text || '최신 네일샵 노출 알고리즘 분석 완료';
     let summary = fullText;
     let changes = '체류시간 증대와 맞춤형 시술 스토리텔링 중심';
 
@@ -136,7 +148,6 @@ app.post(['/api/generate', '/api/generate/'], async (req, res) => {
     }
 
     const ai = getGenAI();
-    const model = 'gemini-2.5-flash';
 
     const shopName = params.shopName ? params.shopName.trim() : '우리 샵';
     const location = params.location ? params.location.trim() : '역세권 위치';
@@ -295,18 +306,41 @@ app.post(['/api/generate', '/api/generate/'], async (req, res) => {
       required: ['titles', 'content', 'hashtags', 'seoStrategy', 'nailTip'],
     };
 
-    const response = await ai.models.generateContent({
-      model,
-      contents: promptText,
-      config: {
-        thinkingConfig: { thinkingBudget: 0 },
-        systemInstruction,
-        responseMimeType: 'application/json',
-        responseSchema: schema,
-      },
-    });
+    let parsedData: any = null;
 
-    const parsedData = JSON.parse(response.text || '{}');
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: promptText,
+          config: {
+            thinkingConfig: { thinkingBudget: 0 },
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: schema,
+          },
+        });
+
+        if (response?.text) {
+          try {
+            parsedData = JSON.parse(response.text);
+            if (parsedData && parsedData.titles && parsedData.content) {
+              console.log(`[Generate] Successfully generated with model: ${model}`);
+              break;
+            }
+          } catch (pe) {
+            console.warn(`[Generate] Model ${model} JSON parse failed:`, pe);
+          }
+        }
+      } catch (modelErr: any) {
+        console.warn(`[Generate] Model ${model} failed, trying next:`, modelErr?.message?.slice(0, 100));
+      }
+    }
+
+    if (!parsedData || !parsedData.content) {
+      console.warn('[Generate] All models failed or rate limited. Using premium fallback content generator.');
+      parsedData = createFallbackBlogContent(params, seoTrend, platform);
+    }
 
     // Ensure fallback for photo guide and cta template if omitted
     if (!parsedData.instagramPhotoGuide || parsedData.instagramPhotoGuide.length === 0) {
@@ -327,8 +361,13 @@ app.post(['/api/generate', '/api/generate/'], async (req, res) => {
 
     return res.json(parsedData);
   } catch (error: any) {
-    console.error('Error in /api/generate:', error);
-    return res.status(500).json({ error: error.message || '원고 생성 중 오류가 발생했습니다.' });
+    console.error('Error in /api/generate, returning resilient fallback:', error);
+    const safeFallback = createFallbackBlogContent(
+      req.body?.params || { mainKeyword: '네일샵' },
+      req.body?.seoTrend,
+      req.body?.platform || 'naver'
+    );
+    return res.json(safeFallback);
   }
 });
 

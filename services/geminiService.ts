@@ -1,4 +1,5 @@
 import { BlogPostParams, GeneratedBlog, SeoTrend, Platform } from "../types";
+import { createFallbackBlogContent } from "../utils/fallbackContent";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

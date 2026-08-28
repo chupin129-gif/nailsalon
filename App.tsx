@@ -113,9 +113,16 @@ const App: React.FC = () => {
     if (cached) {
       try {
         const { trend, savedAt } = JSON.parse(cached);
-        if (Date.now() - savedAt < CACHE_EXPIRY_MS) {
+        if (
+          trend &&
+          !trend.summary?.includes('Could not fetch') &&
+          !trend.summary?.includes('Fallback Logic') &&
+          !trend.changes?.includes('에러로 인한') &&
+          Date.now() - savedAt < CACHE_EXPIRY_MS
+        ) {
           return trend;
         }
+        localStorage.removeItem(`${CACHE_KEY}_${platform}`);
       } catch (e) {
         console.error("Cache parsing error", e);
       }
@@ -183,8 +190,15 @@ const App: React.FC = () => {
     await handleSubmit(platform);
   };
 
-  // Initial load: Only read local storage cache or set default guidelines
+  // Initial load: Clean legacy trend caches and load initial guideline
   useEffect(() => {
+    ['naver', 'instagram', 'threads', 'daangn', 'wordpress', 'tistory', 'blogspot'].forEach(p => {
+      const item = localStorage.getItem(`${CACHE_KEY}_${p}`);
+      if (item && (item.includes('Could not fetch') || item.includes('Fallback Logic') || item.includes('에러로 인한'))) {
+        localStorage.removeItem(`${CACHE_KEY}_${p}`);
+      }
+    });
+
     const cached = getCachedTrend('naver');
     if (cached) {
       setSeoTrends(prev => ({ ...prev, naver: cached }));

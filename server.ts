@@ -20,12 +20,28 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// CORS & Preflight handling
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Health check endpoint
+app.get(['/api/health', '/api/health/'], (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // In-memory 24-hour cache for SEO trends
 const trendCache: Record<string, { data: any; timestamp: number }> = {};
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Route: Get Real-time SEO Guidelines (Short & Crisp)
-app.post('/api/trends', async (req, res) => {
+app.post(['/api/trends', '/api/trends/'], async (req, res) => {
   try {
     const { platform = 'naver', force = false, oldTrend = null } = req.body;
     const cacheKey = platform;
@@ -112,7 +128,7 @@ app.post('/api/trends', async (req, res) => {
 });
 
 // Route: Generate Clean & Channel-Optimized Nail Salon Marketing Content
-app.post('/api/generate', async (req, res) => {
+app.post(['/api/generate', '/api/generate/'], async (req, res) => {
   try {
     const { params, seoTrend, platform = 'naver' } = req.body;
     if (!params || !params.mainKeyword || !params.mainKeyword.trim()) {

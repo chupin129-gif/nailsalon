@@ -20,6 +20,7 @@ export const fetchLatestSeoTrends = async (oldTrend?: SeoTrend, platform: Platfo
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ oldTrend, platform }),
       });
 
@@ -63,6 +64,7 @@ export const generateBlogPost = async (
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'same-origin',
         body: JSON.stringify({ params, seoTrend, platform }),
       });
 

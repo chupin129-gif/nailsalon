@@ -1,0 +1,8 @@
+{
+  "name": "Nail Salon Content AI",
+  "description": "네일샵 및 젤네일 전문 마케팅 원고 생성 AI (네이버 블로그, 인스타그램, 스레드, 당근마켓 최적화)",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
